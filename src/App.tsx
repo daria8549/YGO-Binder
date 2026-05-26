@@ -980,28 +980,62 @@ function App() {
     languageOptions.find((option) => option.value === language) ?? languageOptions[0];
 
   return (
-    <div className="min-h-screen bg-[#080711] text-[#f8ead2]">
-      <div className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-6 sm:py-8">
+    <div className="flex min-h-screen flex-col bg-[#080711] text-[#f8ead2]">
+      <header className="flex items-center justify-between border-b border-[#5b3b16] bg-[#120b1f] p-4">
         <button
           type="button"
           onClick={() => setIsMenuOpen(true)}
-          className="mb-4 rounded-xl border border-[#5b3b16] bg-[#151022] px-4 py-2 text-sm font-semibold text-[#f8ead2] hover:bg-[#241832]"
+          className="rounded-xl border border-[#5b3b16] bg-[#151022] px-4 py-2 text-sm font-semibold text-[#f8ead2] hover:bg-[#241832]"
         >
           ☰ Menu
         </button>
 
-        {isMenuOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/60"
-            onClick={() => setIsMenuOpen(false)}
-          />
-        )}
+        <img
+          src="/yugioh-logo.png"
+          alt="Yu-Gi-Oh! logo"
+          className="h-12 w-auto object-contain sm:h-16"
+        />
 
-        <aside
-          className={`fixed left-0 top-0 z-50 h-full w-64 transform border-r border-[#5b3b16] bg-[#120b1f] p-4 shadow-2xl transition-transform duration-300 ${
-            isMenuOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
-        >
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="appearance-none rounded-xl border border-[#5b3b16] bg-[#151022] px-4 py-2 pr-8 text-sm font-semibold text-[#f8ead2] hover:bg-[#241832]"
+            >
+              {languageOptions.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                  className="bg-[#151022] text-[#f8ead2]"
+                >
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <img
+              src={selectedLanguageOption.flag}
+              alt={selectedLanguageOption.label}
+              className="pointer-events-none absolute right-2 top-1/2 h-3 w-5 -translate-y-1/2 rounded-sm object-cover"
+            />
+          </div>
+        </div>
+      </header>
+
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60"
+          onClick={() => setIsMenuOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`fixed left-0 top-0 z-50 h-full w-64 transform border-r border-[#5b3b16] bg-[#120b1f] p-4 shadow-2xl transition-transform duration-300 ${
+          isMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+      
           <h2 className="mb-4 text-sm font-bold text-[#cdbfa8]">Menu</h2>
 
           <div className="space-y-2">
@@ -1083,14 +1117,7 @@ function App() {
         </aside>
 
         <main className="min-w-0 flex-1">
-          <div className="mb-6 flex justify-center">
-            <img
-              src="/yugioh-logo.png"
-              alt="Yu-Gi-Oh! logo"
-              className="h-20 w-auto object-contain"
-            />
-          </div>
-          
+                    
           {activeView === "account" && (
             <div className="mb-6 rounded-2xl border border-[#5b3b16] bg-[#120b1f] p-4">
               <h2 className="mb-3 text-lg font-bold text-[#f8ead2]">Account</h2>
@@ -1321,46 +1348,54 @@ function App() {
                     e.preventDefault();
                     searchCards();
                   }}
-                  className="mt-5 flex gap-3"
+                  className="mt-5 space-y-3"
                 >
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search card name..."
-                    className="min-w-0 flex-1 rounded-xl bg-[#080711] px-4 py-3 text-[#f8ead2] outline-none ring-1 ring-[#5b3b16] placeholder:text-[#8f806c] focus:ring-[#d4a017]"
-                  />
-
-                  <div className="flex w-[150px] items-center gap-2 rounded-xl bg-[#080711] px-3 py-3 ring-1 ring-[#5b3b16] focus-within:ring-[#d4a017]">
-                    <img
-                      src={selectedLanguageOption.flag}
-                      alt={selectedLanguageOption.label}
-                      className="h-4 w-6 rounded-sm object-cover"
+                  <div className="flex gap-3">
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search card name..."
+                      className="min-w-0 flex-1 rounded-xl bg-[#080711] px-4 py-3 text-[#f8ead2] outline-none ring-1 ring-[#5b3b16] placeholder:text-[#8f806c] focus:ring-[#d4a017]"
                     />
 
-                    <select
-                      value={language}
-                      onChange={(e) => setLanguage(e.target.value)}
-                      className="min-w-0 flex-1 bg-[#080711] text-sm text-[#f8ead2] outline-none"
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="rounded-xl bg-[#d4a017] px-5 py-3 text-sm font-bold text-[#080711] hover:bg-[#f0c64a] disabled:opacity-60"
                     >
-                      {languageOptions.map((option) => (
-                        <option
-                          key={option.value}
-                          value={option.value}
-                          className="bg-[#080711] text-[#f8ead2]"
-                        >
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                      {loading ? "..." : "Search"}
+                    </button>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="rounded-xl bg-[#d4a017] px-5 py-3 text-sm font-bold text-[#080711] hover:bg-[#f0c64a] disabled:opacity-60"
-                  >
-                    {loading ? "..." : "Search"}
-                  </button>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[220px_1fr]">
+                    <div className="flex items-center gap-2 rounded-xl bg-[#080711] px-3 py-3 ring-1 ring-[#5b3b16] focus-within:ring-[#d4a017]">
+                      <img
+                        src={selectedLanguageOption.flag}
+                        alt={selectedLanguageOption.label}
+                        className="h-4 w-6 rounded-sm object-cover"
+                      />
+
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="min-w-0 flex-1 bg-[#080711] text-sm text-[#f8ead2] outline-none"
+                      >
+                        {languageOptions.map((option) => (
+                          <option
+                            key={option.value}
+                            value={option.value}
+                            className="bg-[#080711] text-[#f8ead2]"
+                          >
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center justify-center rounded-xl border border-[#5b3b16] bg-[#080711] px-4 py-3 text-sm font-semibold text-[#d4a017] sm:justify-end">
+                      {displayedSearchCards.length} cards
+                    </div>
+                  </div>
                 </form>
 
                 {searchError && (
@@ -1369,14 +1404,10 @@ function App() {
               </div>
 
               {displayedSearchCards.length > 0 && (
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3">
                   <h3 className="text-lg font-bold text-[#f8ead2]">
                     {search.trim() ? "Search Results" : "Popular Cards"}
                   </h3>
-
-                  <span className="text-sm text-[#cdbfa8]">
-                    {displayedSearchCards.length} cards
-                  </span>
                 </div>
               )}
 
@@ -1936,8 +1967,7 @@ function App() {
 
 
         </main>
-      </div>
-        
+             
         
         {selectedCard && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
