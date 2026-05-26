@@ -22,8 +22,12 @@ type YugiohCard = {
     image_url: string;
     image_url_small: string;
   }[];
+  banlist_info?: {
+    ban_tcg?: string;
+    ban_ocg?: string;
+    ban_goat?: string;
+  };
 };
-
 type BinderItem = {
   id: string;
   card: YugiohCard;
@@ -39,6 +43,21 @@ type BinderItem = {
 
 type BinderSlot = BinderItem | null;
 const cardsPerPage = 9;
+
+type BanlistFormat = "tcg" | "ocg" | "goat";
+type BanlistStatus = "Forbidden" | "Limited" | "Semi-Limited";
+
+function getBanlistStatus(card: YugiohCard, format: BanlistFormat) {
+  if (format === "tcg") return card.banlist_info?.ban_tcg;
+  if (format === "ocg") return card.banlist_info?.ban_ocg;
+  return card.banlist_info?.ban_goat;
+}
+
+function getBanlistTitle(format: BanlistFormat) {
+  if (format === "tcg") return "TCG";
+  if (format === "ocg") return "OCG";
+  return "Goat";
+}
 
 
 function normalizeSearch(value: string) {
@@ -287,7 +306,7 @@ function App() {
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const [hasLoadedCloudBinder, setHasLoadedCloudBinder] = useState(false);
   const [activeView, setActiveView] = useState<
-    "account" | "binder" | "search" | "lookup"
+    "account" | "binder" | "search" | "lookup" | "banlist"
   >("binder");
 
   const totalPages = Math.max(1, Math.ceil(binder.length / cardsPerPage));
@@ -301,6 +320,11 @@ function App() {
   const [lookupSearch, setLookupSearch] = useState("");
   const [defaultCards, setDefaultCards] = useState<YugiohCard[]>([]);
   const [defaultCardsLoading, setDefaultCardsLoading] = useState(false);
+  const [banlistCards, setBanlistCards] = useState<YugiohCard[]>([]);
+  const [banlistLoading, setBanlistLoading] = useState(false);
+  const [banlistError, setBanlistError] = useState("");
+  const [banlistFormat, setBanlistFormat] = useState<BanlistFormat>("tcg");
+
 
   const ownedCards = binder.filter((item) => item !== null);
   const totalOwnedCards = ownedCards.length;
@@ -388,7 +412,12 @@ function App() {
     }
   }, [activeView]);
 
-  
+  useEffect(() => {
+    if (activeView === "banlist") {
+      loadBanlistCards();
+    }
+  }, [activeView]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -460,6 +489,43 @@ function App() {
     if (cleaned.length === 0) return "—";
 
     return Array.from(new Set(cleaned)).join(", ");
+  }
+
+  async function loadBanlistCards() {
+    if (banlistCards.length > 0) return;
+
+    setBanlistLoading(true);
+    setBanlistError("");
+
+    try {
+      const response = await fetch(
+        "https://db.ygoprodeck.com/api/v7/cardinfo.php"
+      );
+
+      const data = await response.json();
+
+      if (!data.data) {
+        setBanlistCards([]);
+        setBanlistError("Could not load banlist cards.");
+        return;
+      }
+
+      const onlyBanlistCards = data.data.filter((card: YugiohCard) => {
+        return (
+          card.banlist_info?.ban_tcg ||
+          card.banlist_info?.ban_ocg ||
+          card.banlist_info?.ban_goat
+        );
+      });
+
+      setBanlistCards(onlyBanlistCards);
+    } catch (error) {
+      console.error(error);
+      setBanlistCards([]);
+      setBanlistError("An error occurred while loading the banlist.");
+    } finally {
+      setBanlistLoading(false);
+    }
   }
 
   async function handleSignUp() {
@@ -998,6 +1064,21 @@ function App() {
             >
               Card Lookup
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveView("banlist");
+                setIsMenuOpen(false);
+              }}
+              className={`w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
+                activeView === "banlist"
+                  ? "bg-[#d4a017] text-[#080711]"
+                  : "text-[#cdbfa8] hover:bg-[#241832] hover:text-[#f8ead2]"
+              }`}
+            >
+              Banlist
+            </button>
           </div>
         </aside>
 
@@ -1305,7 +1386,7 @@ function App() {
                     Loading popular cards...
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
                   {displayedSearchCards.map((card) => {
                     const binderCount = binder.filter(
@@ -1564,6 +1645,178 @@ function App() {
             </div>
           )}
 
+          {activeView === "banlist" && (
+            <div className="mt-8">
+              <div className="mb-5 rounded-2xl border border-[#5b3b16] bg-[#151022] p-5 shadow-lg">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-[#f8ead2]">
+                      Banlist
+                    </h2>
+
+                    <p className="mt-1 text-sm text-[#cdbfa8]">
+                      Check Forbidden, Limited, and Semi-Limited cards.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {(["tcg", "ocg", "goat"] as BanlistFormat[]).map((format) => (
+                      <button
+                        key={format}
+                        type="button"
+                        onClick={() => setBanlistFormat(format)}
+                        className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                          banlistFormat === format
+                            ? "bg-[#d4a017] text-[#080711]"
+                            : "bg-[#241832] text-[#f8ead2] hover:bg-[#322145]"
+                        }`}
+                      >
+                        {getBanlistTitle(format)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {banlistLoading && (
+                  <p className="mt-4 text-sm text-[#cdbfa8]">
+                    Loading banlist...
+                  </p>
+                )}
+
+                {banlistError && (
+                  <p className="mt-4 text-sm text-red-300">
+                    {banlistError}
+                  </p>
+                )}
+              </div>
+
+              {(["Forbidden", "Limited", "Semi-Limited"] as BanlistStatus[]).map(
+                (status) => {
+                  const cardsForStatus = banlistCards.filter(
+                    (card) => getBanlistStatus(card, banlistFormat) === status
+                  );
+
+                  return (
+                    <div key={status} className="mb-6">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-[#f8ead2]">
+                          {status}
+                        </h3>
+
+                        <span className="text-sm text-[#cdbfa8]">
+                          {cardsForStatus.length} cards
+                        </span>
+                      </div>
+
+                      {cardsForStatus.length === 0 ? (
+                        <div className="rounded-2xl border border-[#5b3b16] bg-[#151022] p-5 text-sm text-[#cdbfa8]">
+                          No cards found for this section.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+                          {cardsForStatus.map((card) => {
+                            const binderCount = binder.filter(
+                              (item) => item?.card.id === card.id
+                            ).length;
+
+                            return (
+                              <div
+                                key={card.id}
+                                className="group overflow-hidden rounded-2xl border border-[#5b3b16] bg-[#151022] shadow-lg transition hover:-translate-y-1 hover:border-[#d4a017]"
+                              >
+                                <div className="relative bg-black/30 p-2">
+                                  <img
+                                    src={card.card_images[0]?.image_url}
+                                    alt={card.name}
+                                    className="aspect-[2.5/3.5] w-full rounded-xl object-cover"
+                                  />
+
+                                  <div className="absolute left-3 top-3 rounded-full bg-red-600 px-2 py-1 text-[10px] font-black text-white shadow">
+                                    {status}
+                                  </div>
+
+                                  {binderCount > 0 && (
+                                    <div className="absolute right-3 top-3 rounded-full bg-[#d4a017] px-2 py-1 text-xs font-black text-[#080711] shadow">
+                                      x{binderCount}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="space-y-2 p-3">
+                                  <h2 className="min-h-[40px] text-sm font-bold leading-tight text-[#f8ead2]">
+                                    {card.name}
+                                  </h2>
+
+                                  <p className="truncate text-xs text-[#cdbfa8]">
+                                    {card.type}
+                                  </p>
+
+                                  <div className="flex gap-2 pt-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const newItem: BinderItem = {
+                                          id: crypto.randomUUID(),
+                                          card,
+                                          language: "en",
+                                          condition: "Near Mint",
+                                          rarity: "",
+                                          edition: "",
+                                          year: "",
+                                          price: "",
+                                          setCode: "",
+                                          notes: "",
+                                        };
+
+                                        setBinder((prevBinder) => {
+                                          const firstEmptyIndex = prevBinder.findIndex(
+                                            (slot) => slot === null
+                                          );
+
+                                          if (firstEmptyIndex === -1) {
+                                            return normalizeBinderSlots([
+                                              ...prevBinder,
+                                              newItem,
+                                            ]);
+                                          }
+
+                                          const updatedBinder = [...prevBinder];
+                                          updatedBinder[firstEmptyIndex] = newItem;
+
+                                          return normalizeBinderSlots(updatedBinder);
+                                        });
+                                      }}
+                                      className="flex-1 rounded-lg bg-emerald-600 px-2 py-2 text-xs font-bold text-white hover:bg-emerald-500"
+                                    >
+                                      {binderCount > 0 ? "Add copy" : "Add"}
+                                    </button>
+
+                                    {binderCount > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveView("binder");
+                                          setTimeout(() => showCardInBinder(card.id), 50);
+                                        }}
+                                        className="rounded-lg bg-[#d4a017] px-3 py-2 text-xs font-bold text-[#080711] hover:bg-[#f0c64a]"
+                                      >
+                                        Show
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          )}
+
           {activeView === "lookup" && (
             <div className="mt-8">
               <div className="mb-4 flex items-center justify-between gap-3">
@@ -1679,6 +1932,8 @@ function App() {
               )}
             </div>
           )}
+
+
 
         </main>
       </div>
